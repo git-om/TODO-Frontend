@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect } from "react";
 import { useMutation, gql } from "@apollo/client";
+import Cookies from "js-cookie"; // Import js-cookie
 
 const SIGNUP_MUTATION = gql`
   mutation ($name: String!, $email: String!, $password: String!) {
@@ -16,11 +17,11 @@ const SIGNUP_MUTATION = gql`
 export default function Signup() {
   const router = useRouter();
 
-  const [signUpUser, { data, loading, error }] = useMutation(SIGNUP_MUTATION);
+  const [signUpUser, { loading, error }] = useMutation(SIGNUP_MUTATION);
 
   useEffect(() => {
-    // Check if a token exists in localStorage
-    const token = localStorage.getItem("token");
+    // Check if a token exists in cookies
+    const token = Cookies.get("token");
     if (token) {
       // Redirect to the protected route
       router.push("/protected/todo");
@@ -44,9 +45,9 @@ export default function Signup() {
       if (response.data?.signUpUser?.token) {
         console.log("Signup Success:", response.data);
 
-        // Store the token in localStorage
+        // Store the token in cookies
         const token = response.data.signUpUser.token;
-        localStorage.setItem("token", token);
+        Cookies.set("token", token, { expires: 7 }); // Set cookie with 7-day expiration
 
         // Redirect to the protected route
         router.push("/protected/todo");

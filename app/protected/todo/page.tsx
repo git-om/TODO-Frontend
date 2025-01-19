@@ -3,6 +3,7 @@
 import { useQuery, useMutation, gql, useApolloClient } from "@apollo/client";
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
 import Link from "next/link";
 
 const GET_USER = gql`
@@ -58,7 +59,9 @@ type TodoType = {
 };
 
 export default function Todo() {
+
   const router = useRouter();
+  const client = useApolloClient();
   const [loadingToken, setLoadingToken] = useState(true);
 
   const [editMode, setEditMode] = useState<{ id: number | null; task: string }>(
@@ -70,9 +73,9 @@ export default function Todo() {
   const [newTask, setNewTask] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = Cookies.get("token");
     if (!token) {
-      router.push("/");
+      router.push("/auth/signin"); // Redirect to login if token is missing
     } else {
       setLoadingToken(false);
     }
@@ -153,8 +156,8 @@ export default function Todo() {
   };
 
   const handleDoubleClick = (todo: TodoType) => {
-    setEditMode({ id: todo.id, task: todo.task });
-    setNewTask(todo.task);
+      router.push(`todo/${todo.id}`); // Redirect to the unique todo page
+    
   };
 
   const handleUpdateTodo = async (event: FormEvent<HTMLFormElement>) => {
@@ -177,11 +180,11 @@ export default function Todo() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    const client = useApolloClient();
-    client.clearStore();
-    router.push("/");
+    Cookies.remove("token"); // Remove token from cookies
+    client.clearStore(); // Use the client retrieved from the hook
+    router.push("/auth/signin");
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-purple-100 flex items-center justify-center">
@@ -223,7 +226,7 @@ export default function Todo() {
                   {editMode.id === todo.id ? (
                     <form
                       onSubmit={handleUpdateTodo}
-                      className="flex items-center space-x-4"
+                      className="flex items-center space-x-2"
                     >
                       <input
                         type="text"
@@ -233,43 +236,47 @@ export default function Todo() {
                       />
                       <button
                         type="submit"
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
+                        className="px-3 py-1 bg-green-600 text-white rounded-lg shadow hover:bg-green-700 focus:outline-none"
                       >
                         Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditMode({ id: null, task: "" })}
+                        className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg shadow hover:bg-gray-400 focus:outline-none"
+                      >
+                        Cancel
                       </button>
                     </form>
                   ) : (
                     <h2
-                      className={`text-lg font-medium cursor-pointer transition ${
+                      className={`text-lg font-medium transition ${
                         todo.isDone
                           ? "line-through text-gray-400"
                           : "text-gray-800"
                       }`}
-                      onClick={() => handleToggleTodo(todo.id)}
                       onDoubleClick={() => handleDoubleClick(todo)}
                     >
                       {todo.task}
                     </h2>
                   )}
                 </div>
-                {editMode.id !== todo.id && (
-                  <button
-                    onClick={() => handleDeleteTodo(todo.id)}
-                    className="flex items-center justify-center w-10 h-10 p-0 bg-red-500 hover:bg-red-600 rounded-full shadow focus:outline-none"
+                <button
+                  onClick={() => handleDeleteTodo(todo.id)}
+                  className="flex items-center justify-center w-10 h-10 p-0 bg-red-500 hover:bg-red-600 rounded-full shadow focus:outline-none"
+                >
+                  <svg
+                    fill="white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    x="0px"
+                    y="0px"
+                    width="100"
+                    height="100"
+                    viewBox="0 0 32 32"
                   >
-                    <svg
-                      fill="white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      x="0px"
-                      y="0px"
-                      width="100"
-                      height="100"
-                      viewBox="0 0 32 32"
-                    >
-                      <path d="M 16 3 C 8.832031 3 3 8.832031 3 16 C 3 23.167969 8.832031 29 16 29 C 23.167969 29 29 23.167969 29 16 C 29 8.832031 23.167969 3 16 3 Z M 16 5 C 22.085938 5 27 9.914063 27 16 C 27 22.085938 22.085938 27 16 27 C 9.914063 27 5 22.085938 5 16 C 5 9.914063 9.914063 5 16 5 Z M 12.21875 10.78125 L 10.78125 12.21875 L 14.5625 16 L 10.78125 19.78125 L 12.21875 21.21875 L 16 17.4375 L 19.78125 21.21875 L 21.21875 19.78125 L 17.4375 16 L 21.21875 12.21875 L 19.78125 10.78125 L 16 14.5625 Z"></path>
-                    </svg>
-                  </button>
-                )}
+                    <path d="M 16 3 C 8.832031 3 3 8.832031 3 16 C 3 23.167969 8.832031 29 16 29 C 23.167969 29 29 23.167969 29 16 C 29 8.832031 23.167969 3 16 3 Z M 16 5 C 22.085938 5 27 9.914063 27 16 C 27 22.085938 22.085938 27 16 27 C 9.914063 27 5 22.085938 5 16 C 5 9.914063 9.914063 5 16 5 Z M 12.21875 10.78125 L 10.78125 12.21875 L 14.5625 16 L 10.78125 19.78125 L 12.21875 21.21875 L 16 17.4375 L 19.78125 21.21875 L 21.21875 19.78125 L 17.4375 16 L 21.21875 12.21875 L 19.78125 10.78125 L 16 14.5625 Z"></path>
+                  </svg>
+                </button>
               </div>
             ))
           ) : (
@@ -278,10 +285,6 @@ export default function Todo() {
             </p>
           )}
         </div>
-        <p className="text-center text-gray-500 text-sm mt-4">
-          *Double-click a task to edit it and press Enter or click Save to
-          update.*
-        </p>
         <Link
           href="/auth/signin"
           onClick={handleLogout}
@@ -289,9 +292,6 @@ export default function Todo() {
         >
           Logout
         </Link>
-        <footer className="text-center text-gray-500 text-sm mt-8">
-          Built with ❤️ using Apollo Client and React
-        </footer>
       </div>
     </div>
   );

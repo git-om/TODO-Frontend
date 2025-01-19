@@ -9,6 +9,8 @@ import {
   createHttpLink,
 } from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
+import { onError } from "@apollo/client/link/error";
+import Cookies from "js-cookie";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,23 +24,32 @@ const geistMono = Geist_Mono({
 
 // Create Apollo Client
 const httpLink = createHttpLink({
-  uri: "http://localhost:4000/graphql", // Replace with your GraphQL endpoint
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_ENDPOINT || "http://localhost:4000/graphql",
 });
 
 const authLink = setContext((_, { headers }) => {
-  const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
+  const token = Cookies.get("token"); // Fetch token from cookies
   return {
     headers: {
       ...headers,
-      authorization: token ? token : "",
+      authorization: token ? `Bearer ${token}` : "",
     },
   };
 });
 
+const errorLink = onError(({ networkError }) => {
+  // if (graphQLErrors) {
+  //   graphQLErrors.forEach(({ message, locations, path }) =>
+  //     // console.error(`[GraphQL error]: Message: ${message}, Location: ${locations}, Path: ${path}`)
+  //   );
+  // }
+  if (networkError) {
+    console.error(`[Network error]: ${networkError}`);
+  }
+});
+
 const client = new ApolloClient({
-  link: authLink.concat(httpLink),
+  link: errorLink.concat(authLink).concat(httpLink),
   cache: new InMemoryCache(),
 });
 
@@ -49,13 +60,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <ApolloProvider client={client}>
+      
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          {children}
+        ><ApolloProvider client={client}>
+          {children}</ApolloProvider>
         </body>
-      </ApolloProvider>
+      
     </html>
   );
 }
